@@ -4,15 +4,18 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Health check
 app.get('/', (req, res) => {
   res.send('API deteksi phishing aktif. Gunakan POST ke /api/check-url');
 });
 
+// API endpoint
 app.post('/api/check-url', (req, res) => {
   const url = req.body.url;
   if (!url || typeof url !== 'string') {
@@ -34,22 +37,24 @@ app.post('/api/check-url', (req, res) => {
 
       try {
         const output = JSON.parse(stdout);
-        res.json({
+        return res.json({
           prediction: output.result,
           probability: output.proba,
           whitelisted: !!output.note,
           features: output.features || {}
         });
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError, stdout);
-        res.status(500).json({ error: 'Output Python bukan JSON valid.' });
+      } catch (parseErr) {
+        console.error('JSON parse error:', parseErr, stdout);
+        return res.status(500).json({ error: 'Output Python tidak valid (bukan JSON).' });
       }
     }
   );
 });
 
-const PORT = process.env.PORT || 5000;
+// Pastikan bind ke port yang disediakan Railway
+const PORT = parseInt(process.env.PORT, 10) || 5000;
 const HOST = '0.0.0.0';
+
 app.listen(PORT, HOST, () =>
-  console.log(`Server aktif di http://${HOST}:${PORT}`)
+  console.log(`🚀 Server aktif di http://${HOST}:${PORT}`)
 );
